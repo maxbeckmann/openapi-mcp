@@ -92,6 +92,43 @@ Also note the `--cursor` flag. This is for Cursor compatibility.
 
 Again, MCP integration is currently in beta in Cursor as of v0.46 and may not work as expected.  Currently, Windsurf is a better experience in general.
 
+### VSCode
+
+VSCode supports MCP servers through the GitHub Copilot extension. To configure the MCP server using the GUI:
+
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) to open the Command Palette
+2. Type `MCP: Add Server` and select it
+3. Follow the prompts to configure your server
+
+Alternatively, you can manually edit your MCP configuration file:
+
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
+2. Type `MCP: Open User Settings` and select it
+3. Add your server configuration to the JSON file
+
+The configuration should look like this:
+
+```json
+{
+  "mcpServers": {
+    "product-mcp": {
+      "command": "swagger-mcp",
+      "args": [
+        "--spec",
+        "http://localhost:9000/openapi.json",
+        "--name",
+        "Product-MCP",
+        "--server-url",
+        "http://localhost:9000"
+      ]
+    }
+  }
+}
+```
+
+**Note**: You may need to replace the command `swagger-mcp` with the full path to the `swagger-mcp` executable, which you can find by running `which swagger-mcp`.
+
+After adding the configuration, restart VSCode or reload the window for the changes to take effect.
 
 
 
@@ -254,6 +291,7 @@ You can include as many `--const` options as you need.
 - `--exclude-pattern`: Regex pattern to exclude specific endpoint paths (e.g., "/internal/.*")
 - `--header`: key:value pair of an extra header to include with all requests. Can be included multiple times to specify multiple headers.
 - `--const`: key:value pair of a constant value to always use for a parameter, if the parameter is present on the endpoint (can be a path variable, query parameter, top-level request body property, or multi-part non-file form data field). Can be included multiple times to specify multiple const values.
+- `--auto-generate-operation-ids`: Automatically generate operation IDs for endpoints that don't have them defined in the OpenAPI spec. By default, missing operationIds will cause an error. When enabled, IDs are generated from the HTTP method and path (e.g., `get_api_users_id` for `GET /api/users/{id}`).
 - `--cursor`: Run in cursor mode
 
 ## Authentication
