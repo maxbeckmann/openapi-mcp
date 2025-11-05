@@ -30,7 +30,7 @@ class OpenAPIParser:
     including HTTP methods and JSON schemas for request bodies.
     """
 
-    def __init__(self, spec: Union[str, dict]):
+    def __init__(self, spec: Union[str, dict], auto_generate_operation_ids: bool = False):
         """
         Initialize the parser with an OpenAPI specification.
         
@@ -38,8 +38,11 @@ class OpenAPIParser:
             spec: Either a file path to the OpenAPI spec (JSON or YAML),
                   a URL to fetch the spec from (http/https),
                   a JSON string, or a dictionary containing the spec
+            auto_generate_operation_ids: If True, automatically generate operation IDs for endpoints
+                  that don't have them defined. If False (default), raise an error when operationId is missing.
         """
         self.spec = self._load_spec(spec)
+        self.auto_generate_operation_ids = auto_generate_operation_ids
         self.security_schemes = self._parse_security_schemes()
         self.global_security = self.spec.get('security', [])
         self.has_bearer_schemes = self._has_bearer_schemes()
@@ -493,11 +496,26 @@ class OpenAPIParser:
                     continue
                 
                 try:
+                    # Check for operationId
+                    operation_id = operation.get('operationId', '')
+                    if not operation_id:
+                        if not self.auto_generate_operation_ids:
+                            raise ValueError(
+                                f"Missing operationId for {method.upper()} {path}. "
+                                f"Either add operationId to your OpenAPI spec or use --auto-generate-operation-ids flag."
+                            )
+                        # Generate operation_id from method and path
+                        path_parts = path.strip('/').replace('-', '_').replace('{', '').replace('}', '')
+                        path_parts = ''.join(c if c.isalnum() or c == '/' else '_' for c in path_parts)
+                        path_parts = path_parts.replace('/', '_')
+                        operation_id = f"{method.lower()}_{path_parts}"
+                        logger.warning(f"Auto-generated operationId '{operation_id}' for {method.upper()} {path}")
+                    
                     # Create a new endpoint
                     endpoint = Endpoint(
                         path=path,
                         method=method.upper(),
-                        operation_id=operation.get('operationId', ''),
+                        operation_id=operation_id,
                         summary=operation.get('summary', ''),
                         description=operation.get('description', ''),
                         deprecated=operation.get('deprecated', False),
@@ -669,10 +687,16 @@ class OpenAPIParser:
                         logger.info(f"Successfully parsed endpoint: {method.upper()} {path}")
                         
                     except ValueError as e:
+                        # Re-raise ValueError if it's about missing operationId - this is a critical error
+                        if "Missing operationId" in str(e):
+                            raise
                         logger.warning(f"Error processing parameters for {method.upper()} {path}: {str(e)}")
                         continue
                         
                 except Exception as e:
+                    # Re-raise ValueError if it's about missing operationId - this is a critical error
+                    if isinstance(e, ValueError) and "Missing operationId" in str(e):
+                        raise
                     logger.warning(f"Error processing endpoint {method.upper()} {path}: {str(e)}")
                     continue
         

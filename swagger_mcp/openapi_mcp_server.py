@@ -42,7 +42,8 @@ class OpenAPIMCPServer:
         include_pattern: Optional[str] = None,
         exclude_pattern: Optional[str] = None,
         cursor_mode: bool = False,
-        const_values: Optional[Dict[str, str]] = None
+        const_values: Optional[Dict[str, str]] = None,
+        auto_generate_operation_ids: bool = False
     ):
         """
         Initialize the OpenAPI MCP Server.
@@ -59,6 +60,7 @@ class OpenAPIMCPServer:
             exclude_pattern: Optional regex pattern to exclude endpoints by path (e.g., "/internal/.*")
             cursor_mode: Whether to enable Cursor-specific quirk handling
             const_values: Optional dictionary of parameter names and their constant values
+            auto_generate_operation_ids: If True, auto-generate operation IDs for endpoints without them
         """
         self.server_name = server_name
         self.server_version = server_version or "1.0.0"  
@@ -78,7 +80,7 @@ class OpenAPIMCPServer:
         
         # Load and parse the OpenAPI spec
         try:
-            self.openapi_parser = OpenAPIParser(openapi_spec)
+            self.openapi_parser = OpenAPIParser(openapi_spec, auto_generate_operation_ids=auto_generate_operation_ids)
             logger.info(f"Loaded OpenAPI spec with {len(self.openapi_parser.endpoints)} endpoints")
         except Exception as e:
             logger.error(f"Failed to load OpenAPI spec: {e}")
@@ -249,7 +251,8 @@ def run_server(
     include_pattern: Optional[str] = None,
     exclude_pattern: Optional[str] = None,
     cursor_mode: bool = False,
-    const_values: Optional[Dict[str, str]] = None
+    const_values: Optional[Dict[str, str]] = None,
+    auto_generate_operation_ids: bool = False
 ):
     """
     Run an OpenAPI MCP Server with the given parameters.
@@ -264,6 +267,7 @@ def run_server(
         exclude_pattern: Optional regex pattern to exclude endpoints by path (e.g., "/internal/.*")
         cursor_mode: Whether to enable Cursor-specific quirk handling
         const_values: Optional dictionary of parameter names and their constant values
+        auto_generate_operation_ids: If True, auto-generate operation IDs for endpoints without them
     """
     logger.info(f"Starting OpenAPI MCP Server: {server_name}")
     logger.info(f"OpenAPI spec: {openapi_spec}")
@@ -284,7 +288,8 @@ def run_server(
         include_pattern=include_pattern,
         exclude_pattern=exclude_pattern,
         cursor_mode=cursor_mode,
-        const_values=const_values
+        const_values=const_values,
+        auto_generate_operation_ids=auto_generate_operation_ids
     )
     
     logger.info("Server initialized, starting main loop")
@@ -304,7 +309,8 @@ def main():
             include_pattern=args.include_pattern,
             exclude_pattern=args.exclude_pattern,
             cursor_mode=args.cursor,
-            const_values=const_values
+            const_values=const_values,
+            auto_generate_operation_ids=args.auto_generate_operation_ids
         )
     except Exception as e:
         logger.error(f"Server failed to start: {str(e)}", exc_info=True)

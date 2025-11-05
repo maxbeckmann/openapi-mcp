@@ -14,6 +14,7 @@ def parse_args(description):
     parser.add_argument("--exclude-pattern", help="Regex pattern to exclude specific endpoint paths (e.g., '/internal/.*')")
     parser.add_argument("--cursor", action='store_true', help="Run the server in Cursor mode to deal with Cursor quirks")
     parser.add_argument("--const", action='append', help="Optional dictionary of parameter names and their constant values (in JSON format)")
+    parser.add_argument("--auto-generate-operation-ids", action='store_true', help="Auto-generate operation IDs for endpoints that don't have them defined in the spec")
     
     args = parser.parse_args()
     

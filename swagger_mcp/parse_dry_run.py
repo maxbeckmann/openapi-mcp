@@ -22,8 +22,9 @@ def main():
     print(f"Exclude Pattern: {args.exclude_pattern}")
     print(f"Cursor Mode: {args.cursor}")
     print(f"Const Values: {const_values}")
+    print(f"Auto-generate Operation IDs: {args.auto_generate_operation_ids}")
 
-    parser = OpenAPIParser(args.spec)
+    parser = OpenAPIParser(args.spec, auto_generate_operation_ids=args.auto_generate_operation_ids)
     endpoints = parser.endpoints
 
     simple_endpoints: Dict[str, SimpleEndpoint] = {}
@@ -40,7 +41,8 @@ def main():
         include_pattern=args.include_pattern,
         exclude_pattern=args.exclude_pattern,
         cursor_mode=args.cursor,
-        const_values=const_values
+        const_values=const_values,
+        auto_generate_operation_ids=args.auto_generate_operation_ids
     )
 
     handlers = server._register_handlers()
