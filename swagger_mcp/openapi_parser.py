@@ -2,12 +2,39 @@ import os
 import json
 import requests
 import yaml
+import hashlib
 
 from typing import Dict, List, Any, Optional, Union, Set
 from swagger_mcp.endpoint import Endpoint
 from swagger_mcp.logging import setup_logger
 
 logger = setup_logger(__name__)
+
+def _truncate_operation_id(operation_id: str, max_length: int = 60) -> str:
+    """
+    Truncate operation ID to max_length characters in a deterministic way.
+    If the operation_id exceeds max_length, it will be truncated and a hash
+    suffix will be appended to ensure uniqueness.
+    
+    Args:
+        operation_id: The full operation ID to potentially truncate
+        max_length: Maximum length for the operation ID (default: 60)
+    
+    Returns:
+        The truncated operation ID with hash suffix if needed, or original if short enough
+    """
+    if len(operation_id) <= max_length:
+        return operation_id
+    
+    # Create a deterministic hash of the full operation_id
+    hash_obj = hashlib.sha256(operation_id.encode('utf-8'))
+    hash_suffix = hash_obj.hexdigest()[:8]  # Use first 8 chars of hash
+    
+    # Reserve space for underscore and hash (9 chars total)
+    truncate_at = max_length - 9
+    truncated = operation_id[:truncate_at] + '_' + hash_suffix
+    
+    return truncated
 
 class CircularReferenceError(ValueError):
     """Raised when a circular reference is detected in schema resolution."""
@@ -498,6 +525,7 @@ class OpenAPIParser:
                 try:
                     # Check for operationId
                     operation_id = operation.get('operationId', '')
+                    auto_generated = False
                     if not operation_id:
                         if not self.auto_generate_operation_ids:
                             raise ValueError(
@@ -509,7 +537,18 @@ class OpenAPIParser:
                         path_parts = ''.join(c if c.isalnum() or c == '/' else '_' for c in path_parts)
                         path_parts = path_parts.replace('/', '_')
                         operation_id = f"{method.lower()}_{path_parts}"
+                        auto_generated = True
                         logger.warning(f"Auto-generated operationId '{operation_id}' for {method.upper()} {path}")
+                    
+                    # Only truncate auto-generated operation_ids, not explicitly provided ones
+                    if auto_generated:
+                        original_operation_id = operation_id
+                        operation_id = _truncate_operation_id(operation_id)
+                        if operation_id != original_operation_id:
+                            logger.warning(
+                                f"Truncated operationId from '{original_operation_id}' ({len(original_operation_id)} chars) "
+                                f"to '{operation_id}' ({len(operation_id)} chars)"
+                            )
                     
                     # Create a new endpoint
                     endpoint = Endpoint(
